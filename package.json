@@ -1,0 +1,22 @@
+{
+  "name": "armtest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run:debug": "NODE_ENV=dev DEBUG=* node --inspect -r ts-node/register main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "readline": "^1.3.0",
+    "serialport": "^7.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^12.0.2",
+    "@types/serialport": "^7.0.3",
+    "ts-node": "^8.1.0",
+    "typescript": "^3.4.5"
+  }
+}
