@@ -27,7 +27,8 @@ export class SerialManager {
         });
 
         this._serial.on("data", (chunk: string) => {
-            this.returns.push(chunk);
+            const chunkData = chunk.split("");
+            chunkData.forEach(data => this.returns.push(data));
         });
     };
 
