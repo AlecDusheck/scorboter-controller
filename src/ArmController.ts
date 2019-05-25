@@ -1,6 +1,15 @@
 import {SerialManager} from "./SerialManager";
 
 export class ArmController {
+    private readonly _serialManager: SerialManager;
+
+    constructor(path: string) {
+        ArmController.instance = this;
+        this._serialManager = new SerialManager(path);
+    }
+
+    private static _instance: ArmController;
+
     static get instance(): ArmController {
         return this._instance;
     }
@@ -13,19 +22,10 @@ export class ArmController {
         return this._serialManager;
     }
 
-    private static _instance: ArmController;
-
-    private _serialManager: SerialManager;
-
-    constructor (path: string) {
-        ArmController.instance = this;
-        this._serialManager = new SerialManager(path);
-    }
-
-    public init = async () => {
+    public init = async (): Promise<void> => {
         try {
             await this.serialManager.connect();
-        }catch (e) {
+        } catch (e) {
             console.log("Failed to connect! Check console errors above for more information.");
             process.exit(1);
         }

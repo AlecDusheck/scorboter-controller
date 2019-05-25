@@ -2,8 +2,11 @@ import SerialPort = require("serialport");
 import {Utils} from "./Utils";
 
 export class SerialManager {
-    get serial(): SerialPort {
-        return this._serial;
+    private readonly _path: string;
+    private dataQueue: Array<string>;
+
+    constructor(path: string) {
+        this._path = path;
     }
 
     get path(): string {
@@ -11,15 +14,12 @@ export class SerialManager {
     }
 
     private _serial: SerialPort;
-    private readonly _path: string;
 
-    private dataQueue: Array<string>;
-
-    constructor(path: string) {
-        this._path = path;
+    get serial(): SerialPort {
+        return this._serial;
     }
 
-    public connect = async () => {
+    public connect = async (): Promise<void> => {
         console.log("Attempting to open serial connection....");
         this._serial = new SerialPort(this.path, {
             baudRate: 9600,
@@ -28,14 +28,14 @@ export class SerialManager {
         });
 
         await new Promise((resolve, reject) => {
-           this._serial.on("open", () => {
-               return resolve();
-           });
+            this._serial.on("open", () => {
+                return resolve();
+            });
 
-           this._serial.on("error", err => {
-               console.log("Caught exception: " + err);
-               return reject(err);
-           })
+            this._serial.on("error", err => {
+                console.log("Caught exception: " + err);
+                return reject(err);
+            })
         });
 
         console.log("Connection to serial controller established!");
@@ -47,7 +47,7 @@ export class SerialManager {
         });
     };
 
-    public write = async (data: string) => {
+    public write = async (data: string): Promise<void> => {
         console.log("Writing data to serial: " + data);
         return new Promise((resolve, reject) => {
             this.serial.write(data, function (err) {
@@ -57,11 +57,11 @@ export class SerialManager {
         })
     };
 
-    public getNextData = async () => {
-        if (this.dataQueue.length > 0){
+    public getNextData = async (): Promise<string> => {
+        if (this.dataQueue.length > 0) {
             return this.dataQueue.shift();
         } else {
-            await Utils.delay(500);
+            await Utils.delay(100);
             return await this.getNextData();
         }
     }

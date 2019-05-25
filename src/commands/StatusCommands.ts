@@ -14,8 +14,8 @@ export enum MotorStatus {
 export class StatusCommands {
     public getInputStatus = async (input: number): Promise<BinaryReturn> => {
         await ArmController.instance.serialManager.write(input + " I");
-        
-        const data =  await ArmController.instance.serialManager.getNextData();
+
+        const data = await ArmController.instance.serialManager.getNextData();
         if (data === "0") {
             return BinaryReturn.OFF
         }
@@ -24,7 +24,7 @@ export class StatusCommands {
 
     public getLimitSwitchStatus = async (input: number): Promise<BinaryReturn> => {
         await ArmController.instance.serialManager.write(input + " L");
-        
+
         const data = await ArmController.instance.serialManager.getNextData();
         if (data === "0") {
             return BinaryReturn.OFF
@@ -34,8 +34,8 @@ export class StatusCommands {
 
     public getMotorCompletion = async (): Promise<BinaryReturn> => {
         await ArmController.instance.serialManager.write("E");
-        
-        const data =  await ArmController.instance.serialManager.getNextData();
+
+        const data = await ArmController.instance.serialManager.getNextData();
         if (data === "0") {
             return BinaryReturn.OFF;
         }
@@ -44,7 +44,7 @@ export class StatusCommands {
 
     public getMotorStatus = async (): Promise<MotorStatus> => {
         await ArmController.instance.serialManager.write("A");
-        
+
         const data = await ArmController.instance.serialManager.getNextData();
         if (data === "0") {
             return MotorStatus.NOT_MOVING;

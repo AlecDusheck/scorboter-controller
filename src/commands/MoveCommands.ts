@@ -1,4 +1,3 @@
-import {SerialManager} from "../SerialManager";
 import {ArmController} from "../ArmController";
 
 export enum Motor {
