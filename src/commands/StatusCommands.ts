@@ -7,8 +7,8 @@ export enum BinaryReturn {
 
 export enum MotorStatus {
     NOT_MOVING = "off",
-    LESS_THEN_ENCODER_OFFST = "on, less then encoder offset to finish",
-    MORE_THEN_ENCODER_OFFST = "on, more then encoder offset to finish"
+    LESS_THEN_ENCODER_OFFSET = "on, less then encoder offset to finish",
+    MORE_THEN_ENCODER_OFFSET = "on, more then encoder offset to finish"
 }
 
 export class StatusCommands {
@@ -49,8 +49,8 @@ export class StatusCommands {
         if (data === "0") {
             return MotorStatus.NOT_MOVING;
         } else if (data === "-") {
-            return MotorStatus.LESS_THEN_ENCODER_OFFST;
+            return MotorStatus.LESS_THEN_ENCODER_OFFSET;
         }
-        return MotorStatus.MORE_THEN_ENCODER_OFFST;
+        return MotorStatus.MORE_THEN_ENCODER_OFFSET;
     };
 }

@@ -7,9 +7,10 @@ process.argv.forEach((val, index, array) => {
         if (index + 1 >= array.length) return;
 
         path = array[index + 1];
-        console.log("Using path override: " + path);
     }
 });
 
+console.log("Using path: " + path + ". Change this by using the -path flag");
 
-new ArmController(path);
+const controller = new ArmController(path);
+controller.init();
