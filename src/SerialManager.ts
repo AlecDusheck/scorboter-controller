@@ -23,8 +23,9 @@ export class SerialManager {
         console.log("Attempting to open serial connection....");
         this._serial = new SerialPort(this.path, {
             baudRate: 9600,
-            parity: "even",
-            stopBits: 2
+            parity: "none",
+            stopBits: 2,
+            dataBits: 8
         });
 
         await new Promise((resolve, reject) => {
