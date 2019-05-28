@@ -6,22 +6,31 @@ export class Motor {
         return this._motorId;
     }
 
+    get maxUnits(): number{
+        return this._maxUnits;
+    }
+
+    set maxUnits(value: number){
+        this._maxUnits = value;
+    }
+
     private currentUnits: number;
 
-    private maxUnits: number;
+    private _maxUnits: number;
     private readonly _motorId: number;
 
     constructor (motorId: number, maxUnits?: number) {
         this._motorId = motorId;
 
-        this.maxUnits = maxUnits || 0 ;
+        this._maxUnits = maxUnits;
         this.currentUnits = 0;
     }
 
-    public calibrate = async () => {
+    public calibrate = async (): Promise<number> => {
         await ArmController.instance.serialManager.write(this.motorId + " V " + 1); // Update the speed
         await this.moveToEdge(this.maxUnits / 50); // Move to the edge
         this.maxUnits = await this.moveToCenterFromEdge();
+        return this.maxUnits;
     };
 
     private moveToEdge = async (count: number) => {
@@ -49,6 +58,8 @@ export class Motor {
     };
 
     public move = async (units: number) => {
+        if(!this.maxUnits) throw new Error("Motor must be calibrated first!");
+
         let amount;
         let symbol;
 
@@ -56,14 +67,18 @@ export class Motor {
             const maxUnitsReverse = this.maxUnits * -1; // Pos 0 is at the center, you can go positive or negative the same amount
             if (this.currentUnits + units < maxUnitsReverse) { // We're going negative, fix it
                 amount = this.currentUnits - this.maxUnits;
+                this.currentUnits = maxUnitsReverse;
             } else {
+                this.currentUnits = this.currentUnits - units;
                 amount = units; // All is fine
             }
             symbol = "-";
         } else {
             if(this.currentUnits + units > this.maxUnits) {
                 amount = this.maxUnits - this.currentUnits;
+                this.currentUnits = this.maxUnits;
             } else {
+                this.currentUnits = this.currentUnits + units;
                 amount = units;
             }
             symbol = "+";
