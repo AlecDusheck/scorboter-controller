@@ -2,12 +2,6 @@ import SerialPort = require("serialport");
 import {Utils} from "./Utils";
 
 export class SerialManager {
-    private readonly _path: string;
-    private dataQueue: Array<string>;
-
-    constructor(path: string) {
-        this._path = path;
-    }
 
     get path(): string {
         return this._path;
@@ -17,6 +11,14 @@ export class SerialManager {
 
     get serial(): SerialPort {
         return this._serial;
+    }
+
+    private readonly _path: string;
+    private dataQueue: Array<string>;
+
+    constructor(path: string) {
+        this._path = path;
+        this.dataQueue = [];
     }
 
     public connect = async (): Promise<void> => {
@@ -42,7 +44,7 @@ export class SerialManager {
         console.log("Connection to serial controller established!");
 
         this._serial.on("data", (chunk: string) => {
-            const chunkData = chunk.split("");
+            const chunkData = chunk.toString().split("");
             chunkData.forEach(data => this.dataQueue.push(data));
             console.log("Data queue update: " + this.dataQueue);
         });
@@ -56,6 +58,10 @@ export class SerialManager {
                 else return resolve();
             });
         })
+    };
+
+    public clearQueue = () => {
+        this.dataQueue = [];
     };
 
     public getNextData = async (): Promise<string> => {

@@ -14,3 +14,7 @@ console.log("Using path: " + path + ". Change this by using the -path flag");
 
 const controller = new ArmController(path);
 controller.init();
+
+// import {Testing} from "./src/Testing";
+//
+// new Testing();
