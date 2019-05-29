@@ -1,6 +1,16 @@
 import {ArmController, BinaryReturn} from "../ArmController";
+import {Utils} from "../Utils";
 
 export class Motor {
+
+    public static EDGE_UNITS = 15;
+    public static EDGE_SPEED = 2;
+    public static EDGE_WAIT = 500;
+
+    public static CENTER_UNITS = 25;
+    public static CENTER_SPEED = 3;
+    public static CENTER_WAIT = 500;
+
 
     get motorId(): number{
         return this._motorId;
@@ -27,24 +37,45 @@ export class Motor {
     }
 
     public calibrate = async (): Promise<number> => {
-        await ArmController.instance.serialManager.write(this.motorId + " V " + 1); // Update the speed
-        await this.moveToEdge(this.maxUnits / 50); // Move to the edge
+        await this.setSpeed(Motor.EDGE_SPEED);
+        await this.moveToEdge(); // Move to the edge
+
+        await this.resetMotor();
+
+        await this.setSpeed(Motor.CENTER_SPEED);
         this.maxUnits = await this.moveToCenterFromEdge();
         return this.maxUnits;
     };
 
-    private moveToEdge = async (count: number) => {
-        if (count < 1) return;
-        await ArmController.instance.serialManager.write(this.motorId + " M + 50");
+    private resetMotor = async (): Promise<void> => {
+        await ArmController.instance.serialManager.write(this.motorId + " R");
+    };
 
-        await this.moveToEdge(count - 1);
+    private getRemaining = async (): Promise<any> => { // IDK what this type is
+        ArmController.instance.serialManager.clearQueue();
+        await ArmController.instance.serialManager.write(this.motorId + " Q");
+        return await ArmController.instance.serialManager.getNextData();
+    };
+
+    private moveToEdge = async () => {
+        await ArmController.instance.serialManager.write(this.motorId + " M + " + Motor.EDGE_UNITS + "\r");
+        await Utils.delay(Motor.EDGE_WAIT);
+
+        const bytes = await this.getRemaining();
+
+        // Thanks Jack and Andrew! http://www.theoldrobots.com/book45/ER3-Manual.pdf Page 132
+        const movementRemaining = ((bytes[0] & 127) << 7) | (bytes[1] & 127);
+        if(movementRemaining > Motor.EDGE_UNITS - 1) return;
+
+         await this.moveToEdge();
     };
 
     private moveToCenterFromEdge = async (iterations: number = 0): Promise<number> => {
         if(await this.getLimitSwitch() === BinaryReturn.ON) return iterations;
-        await ArmController.instance.serialManager.write(this.motorId + " M - 50");
+        await ArmController.instance.serialManager.write(this.motorId + " M - " + Motor.CENTER_UNITS + "\r");
+        await Utils.delay(Motor.CENTER_WAIT);
 
-        return await this.moveToCenterFromEdge(iterations + 50);
+        return await this.moveToCenterFromEdge(iterations + 10);
     };
 
 
@@ -52,9 +83,16 @@ export class Motor {
         ArmController.instance.serialManager.clearQueue();
         await ArmController.instance.serialManager.write(this.motorId + " L");
 
-        const result = await ArmController.instance.serialManager.getNextData();
+        const result = (await ArmController.instance.serialManager.getNextData()).toString();
+
+        // http://www.theoldrobots.com/book45/ER3-Manual.pdf page 129
         if (result === "0") return BinaryReturn.OFF;
         return BinaryReturn.ON;
+    };
+
+    public setSpeed = async (speed: number) => {
+        if (speed < 1 || speed > 9) return;
+        await ArmController.instance.serialManager.write(this.motorId + " V " + speed);
     };
 
     public move = async (units: number) => {
@@ -84,6 +122,6 @@ export class Motor {
             symbol = "+";
         }
 
-        await ArmController.instance.serialManager.write(this.motorId + " M " + symbol + " " + amount);
+        await ArmController.instance.serialManager.write(this.motorId + " M " + symbol + " " + amount + "\r");
     };
 }

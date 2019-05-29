@@ -44,6 +44,11 @@ export class ArmController {
 
     public configureMotors = () => {
         this.addMotor("base", new Motor(1));
+        this.addMotor("elbow1", new Motor(2));
+        // this.addMotor("elbow2", new Motor(3));
+        // this.addMotor("finger1", new Motor(4));
+        // this.addMotor("finger2", new Motor(5));
+
     };
 
     public init = async (): Promise<void> => {
@@ -62,29 +67,29 @@ export class ArmController {
     };
 
     public calibrateAll = async () => {
-        const localStoragePath = path.join(__dirname, "../localstorage/cache.json");
+        // const localStoragePath = path.join(__dirname, "../localstorage/cache.json");
+        //
+        // let cache: Array<any>;
+        // try{
+        //     cache = await fs.readJSON(localStoragePath);
+        //     console.log("Loaded cache with " + cache.length + " entries.");
+        // }catch (e) {
+        //     await fs.outputJson(localStoragePath, []);
+        //     cache = [];
+        //     console.log("Generated new cache file");
+        // }
 
-        let cache: Array<any>;
-        try{
-            cache = await fs.readJSON(localStoragePath);
-            console.log("Loaded cache with " + cache.length + " entries.");
-        }catch (e) {
-            await fs.outputJson(localStoragePath, []);
-            cache = [];
-            console.log("Generated new cache file");
-        }
-
-        await Promise.all(this.motors.map(async (motorConfig) => {
-            const cachedMax = cache[motorConfig.name];
-            if (cachedMax) {
-                console.log("Got cached data for motor \"" + motorConfig.name + "\", Units: " + cachedMax);
-                motorConfig.motor.maxUnits = cachedMax;
-                return;
-            }
+        for (const motorConfig of this.motors) {
+            // const cachedMax = cache[motorConfig.name];
+            // if (cachedMax) {
+            //     console.log("Got cached data for motor \"" + motorConfig.name + "\", Units: " + cachedMax);
+            //     motorConfig.motor.maxUnits = cachedMax;
+            //     return;
+            // }
 
             console.log("Calibrating \"" + motorConfig.name + "\"...");
             await motorConfig.motor.calibrate();
-        }))
+        }
     };
 
     public addMotor = (name: string, motor: Motor | SnapMotor) => {

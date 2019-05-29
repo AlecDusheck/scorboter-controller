@@ -14,7 +14,7 @@ export class SerialManager {
     }
 
     private readonly _path: string;
-    private dataQueue: Array<string>;
+    private dataQueue: Array<any>;
 
     constructor(path: string) {
         this._path = path;
@@ -44,8 +44,9 @@ export class SerialManager {
         console.log("Connection to serial controller established!");
 
         this._serial.on("data", (chunk: string) => {
-            const chunkData = chunk.toString().split("");
-            chunkData.forEach(data => this.dataQueue.push(data));
+            // const chunkData = chunk.toString().split("");
+            // chunkData.forEach(data => this.dataQueue.push(data));
+            this.dataQueue.push(chunk);
             console.log("Data queue update: " + this.dataQueue);
         });
     };
@@ -64,7 +65,7 @@ export class SerialManager {
         this.dataQueue = [];
     };
 
-    public getNextData = async (): Promise<string> => {
+    public getNextData = async (): Promise<any> => {
         if (this.dataQueue.length > 0) {
             return this.dataQueue.shift();
         } else {
