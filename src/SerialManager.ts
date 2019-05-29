@@ -43,16 +43,21 @@ export class SerialManager {
 
         console.log("Connection to serial controller established!");
 
-        this._serial.on("data", (chunk: string) => {
+        this._serial.on("data", (chunk: any) => {
             // const chunkData = chunk.toString().split("");
             // chunkData.forEach(data => this.dataQueue.push(data));
-            this.dataQueue.push(chunk);
-            console.log("Data queue update: " + this.dataQueue);
+            if(this.dataQueue.length !== 0) {
+                console.log("[WARNING] Data queue appears to be backed up. This may lead to unexpected behavior.");
+            }
+
+            chunk.toString().split("").forEach(chunkData => {
+                console.log("Handling chunk: " + chunkData);
+                this.dataQueue.push(chunkData);
+            });
         });
     };
 
     public write = async (data: string): Promise<void> => {
-        console.log("Writing data to serial: " + data);
         return new Promise((resolve, reject) => {
             this.serial.write(data, function (err) {
                 if (err) return reject(err);
@@ -65,11 +70,11 @@ export class SerialManager {
         this.dataQueue = [];
     };
 
-    public getNextData = async (): Promise<any> => {
-        if (this.dataQueue.length > 0) {
-            return this.dataQueue.shift();
+    public getNextData = async (amount: number = 2): Promise<any> => {
+        if (this.dataQueue.length > amount) {
+            return this.dataQueue.splice(0, amount);
         } else {
-            await Utils.delay(100);
+            await Utils.delay(50);
             return await this.getNextData();
         }
     }

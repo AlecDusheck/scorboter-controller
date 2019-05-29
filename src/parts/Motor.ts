@@ -52,9 +52,8 @@ export class Motor {
     };
 
     private getRemaining = async (): Promise<any> => { // IDK what this type is
-        ArmController.instance.serialManager.clearQueue();
         await ArmController.instance.serialManager.write(this.motorId + " Q");
-        return await ArmController.instance.serialManager.getNextData();
+        return await ArmController.instance.serialManager.getNextData(2); // Two bytes are sent
     };
 
     private moveToEdge = async () => {
@@ -65,7 +64,7 @@ export class Motor {
 
         // Thanks Jack and Andrew! http://www.theoldrobots.com/book45/ER3-Manual.pdf Page 132
         const movementRemaining = ((bytes[0] & 127) << 7) | (bytes[1] & 127);
-        if(movementRemaining > Motor.EDGE_UNITS - 1) return;
+        if(movementRemaining > 0) return; // If any movement is left return
 
          await this.moveToEdge();
     };
