@@ -52,7 +52,7 @@ export class CacheManager {
     public static loadStates = async (skipCache?: boolean) => {
         const cache = await CacheManager.getCacheData();
         for (const motorConfig of ArmController.instance.motors) {
-            if (skipCache !== undefined && skipCache === true) { // Check to see if we need to skip cache
+            if (!skipCache) { // Check to see if we need to skip cache
                 const cacheData = cache.find(motorCache => motorCache.motor === motorConfig.name);
 
                 if (cacheData) {
