@@ -86,6 +86,7 @@ export class Motor {
         this.negMax = await this.moveToHardstop(MotorDirection.NEGATIVE);
 
         // Recenter
+        await this.setSpeed(Motor.RECENTER_SPEED);
         await ArmController.instance.serialManager.write(this.motorId + " M " + MotorDirection.PLUS + " " + this.negMax + "\r");
         this.currentUnits = 0;
     };
