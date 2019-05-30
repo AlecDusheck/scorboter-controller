@@ -4,16 +4,11 @@ import {Motor} from "./parts/Motor";
 
 import * as fs from "fs-extra";
 import * as path from 'path';
+import {CacheManager} from "./CacheManager";
 
 export enum BinaryReturn {
     OFF = "off",
     ON = "on"
-}
-
-export enum MotorStatus {
-    NOT_MOVING = "off",
-    LESS_THEN_ENCODER_OFFSET = "on, less then encoder offset to finish",
-    MORE_THEN_ENCODER_OFFSET = "on, more then encoder offset to finish"
 }
 
 export interface MotorConfiguration {
@@ -22,6 +17,9 @@ export interface MotorConfiguration {
 }
 
 export class ArmController {
+    static get root(): string {
+        return __dirname;
+    }
 
     static get instance(): ArmController {
         return this._instance;
@@ -29,17 +27,21 @@ export class ArmController {
 
     private static _instance: ArmController;
 
+    get motors(): Array<MotorConfiguration> {
+        return this._motors;
+    }
+
     get serialManager(): SerialManager {
         return this._serialManager;
     }
 
     private readonly _serialManager: SerialManager;
-    private motors: Array<MotorConfiguration>;
+    private readonly _motors: Array<MotorConfiguration>;
 
     constructor(serialPath: string) {
         ArmController._instance = this;
         this._serialManager = new SerialManager(serialPath);
-        this.motors = [];
+        this._motors = [];
     }
 
     public configureMotors = () => {
@@ -51,7 +53,7 @@ export class ArmController {
 
     };
 
-    public init = async (): Promise<void> => {
+    public init = async (skipCache?: boolean): Promise<void> => {
         try {
             await this.serialManager.connect();
         } catch (e) {
@@ -63,38 +65,13 @@ export class ArmController {
 
         this.configureMotors();
 
-        await this.calibrateAll();
-    };
-
-    public calibrateAll = async () => {
-        // const localStoragePath = path.join(__dirname, "../localstorage/cache.json");
-        //
-        // let cache: Array<any>;
-        // try{
-        //     cache = await fs.readJSON(localStoragePath);
-        //     console.log("Loaded cache with " + cache.length + " entries.");
-        // }catch (e) {
-        //     await fs.outputJson(localStoragePath, []);
-        //     cache = [];
-        //     console.log("Generated new cache file");
-        // }
-
-        for (const motorConfig of this.motors) {
-            // const cachedMax = cache[motorConfig.name];
-            // if (cachedMax) {
-            //     console.log("Got cached data for motor \"" + motorConfig.name + "\", Units: " + cachedMax);
-            //     motorConfig.motor.maxUnits = cachedMax;
-            //     return;
-            // }
-
-            console.log("Calibrating \"" + motorConfig.name + "\"...");
-            await motorConfig.motor.calibrate();
-        }
+        await CacheManager.loadStates(skipCache);
+        CacheManager.bindToStdin();
     };
 
     public addMotor = (name: string, motor: Motor | SnapMotor) => {
         console.log("Adding motor \"" + name + "\" with ID #" + motor.motorId);
-        this.motors.push({
+        this._motors.push({
             name: name,
             motor: motor
         })
