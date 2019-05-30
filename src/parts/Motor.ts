@@ -1,8 +1,12 @@
 import {ArmController, BinaryReturn} from "../ArmController";
 import {Utils} from "../Utils";
 
-export class Motor {
+export enum MotorDirection {
+    PLUS = "+",
+    NEGATIVE = "-"
+}
 
+export class Motor {
     public static EDGE_UNITS = 15;
     public static EDGE_SPEED = 2;
     public static EDGE_WAIT = 500;
@@ -11,72 +15,103 @@ export class Motor {
     public static CENTER_SPEED = 3;
     public static CENTER_WAIT = 500;
 
+    public static RECENTER_SPEED = 5;
+
+    get posMax(): number {
+        return this._posMax;
+    }
+
+    set posMax(value: number) {
+        this._posMax = value;
+    }
+
+    get negMax(): number {
+        return this._negMax;
+    }
+
+    set negMax(value: number) {
+        this._negMax = value;
+    }
+
+    get currentUnits(): number {
+        return this._currentUnits;
+    }
+
+    set currentUnits(value: number) {
+        this._currentUnits = value;
+    }
 
     get motorId(): number{
         return this._motorId;
     }
 
-    get maxUnits(): number{
-        return this._maxUnits;
-    }
-
-    set maxUnits(value: number){
-        this._maxUnits = value;
-    }
-
-    private currentUnits: number;
-
-    private _maxUnits: number;
+    private _currentUnits: number;
+    private _posMax: number;
+    private _negMax: number;
     private readonly _motorId: number;
 
-    constructor (motorId: number, maxUnits?: number) {
+    constructor (motorId: number) {
         this._motorId = motorId;
 
-        this._maxUnits = maxUnits;
-        this.currentUnits = 0;
+        this._posMax = undefined;
+        this._negMax = undefined;
+        this._currentUnits = undefined;
     }
-
-    public calibrate = async (): Promise<number> => {
-        await this.setSpeed(Motor.EDGE_SPEED);
-        await this.moveToEdge(); // Move to the edge
-
-        await this.resetMotor();
-
-        await this.setSpeed(Motor.CENTER_SPEED);
-        this.maxUnits = await this.moveToCenterFromEdge();
-        return this.maxUnits;
-    };
 
     private resetMotor = async (): Promise<void> => {
         await ArmController.instance.serialManager.write(this.motorId + " R");
     };
 
-    private getRemaining = async (): Promise<any> => { // IDK what this type is
+    private getRemaining = async (): Promise<number> => {
         await ArmController.instance.serialManager.write(this.motorId + " Q");
-        return await ArmController.instance.serialManager.getNextData(2); // Two bytes are sent
-    };
-
-    private moveToEdge = async () => {
-        await ArmController.instance.serialManager.write(this.motorId + " M + " + Motor.EDGE_UNITS + "\r");
-        await Utils.delay(Motor.EDGE_WAIT);
-
-        const bytes = await this.getRemaining();
+        const bytes = await ArmController.instance.serialManager.getNextData(2); // Two bytes are sent
 
         // Thanks Jack and Andrew! http://www.theoldrobots.com/book45/ER3-Manual.pdf Page 132
-        const movementRemaining = ((bytes[0] & 127) << 7) | (bytes[1] & 127);
+        return ((bytes[0] & 127) << 7) | (bytes[1] & 127);
+    };
+
+    public calibrate = async (): Promise<void> => {
+        // Move to positive hardstop
+        await this.setSpeed(Motor.EDGE_SPEED);
+        await this.moveToHardstop(MotorDirection.PLUS); // Move to the edge
+
+        // Move to center
+        await this.resetMotor();
+        await this.setSpeed(Motor.CENTER_SPEED);
+        this.posMax = await this.moveFromHardstopToCenter(MotorDirection.PLUS);
+
+        // Move to negative hardstop
+        await this.resetMotor();
+        await this.setSpeed(Motor.EDGE_SPEED);
+        this.negMax = await this.moveToHardstop(MotorDirection.NEGATIVE);
+
+        // Recenter
+        await ArmController.instance.serialManager.write(this.motorId + " M " + MotorDirection.PLUS + " " + this.negMax + "\r");
+        this.currentUnits = 0;
+    };
+
+    private moveToHardstop = async (direction: MotorDirection, iterations: number = 0): Promise<number> => {
+        await ArmController.instance.serialManager.write(this.motorId + " M " + direction + " " + Motor.EDGE_UNITS + "\r");
+        await Utils.delay(Motor.EDGE_WAIT);
+
+        const movementRemaining = await this.getRemaining();
         if(movementRemaining > 0) return; // If any movement is left return
 
-         await this.moveToEdge();
+         await this.moveToHardstop(direction, iterations + Motor.EDGE_UNITS);
     };
 
-    private moveToCenterFromEdge = async (iterations: number = 0): Promise<number> => {
+    private moveFromHardstopToCenter = async (hardstopDirection: MotorDirection, iterations: number = 0): Promise<number> => {
         if(await this.getLimitSwitch() === BinaryReturn.ON) return iterations;
-        await ArmController.instance.serialManager.write(this.motorId + " M - " + Motor.CENTER_UNITS + "\r");
+
+        let invertedMotorDirection; // We need to invert the hardstop direction since we're moving the other way
+        if(hardstopDirection === MotorDirection.PLUS) invertedMotorDirection = MotorDirection.NEGATIVE;
+        else invertedMotorDirection = MotorDirection.PLUS;
+
+        await ArmController.instance.serialManager.write(this.motorId + " M " + invertedMotorDirection + " " + Motor.CENTER_UNITS + "\r");
         await Utils.delay(Motor.CENTER_WAIT);
 
-        return await this.moveToCenterFromEdge(iterations + 10);
+        return await this.moveFromHardstopToCenter(hardstopDirection, iterations + Motor.CENTER_UNITS);
     };
-
 
     public getLimitSwitch = async (): Promise<BinaryReturn> => {
         ArmController.instance.serialManager.clearQueue();
@@ -95,32 +130,31 @@ export class Motor {
     };
 
     public move = async (units: number) => {
-        if(!this.maxUnits) throw new Error("Motor must be calibrated first!");
+        if(!this._posMax || !this._negMax || !this._currentUnits) throw new Error("Motor must be calibrated first!");
 
         let amount;
-        let symbol;
-
+        let direction: MotorDirection;
         if(units < 0) { // We're moving back
-            const maxUnitsReverse = this.maxUnits * -1; // Pos 0 is at the center, you can go positive or negative the same amount
-            if (this.currentUnits + units < maxUnitsReverse) { // We're going negative, fix it
-                amount = this.currentUnits - this.maxUnits;
+            const maxUnitsReverse = this.negMax * -1; // Pos 0 is at the center, you can go positive or negative the same amount
+            if (this._currentUnits + units < maxUnitsReverse) { // We're going negative, fix it
+                amount = this._currentUnits - this.negMax;
                 this.currentUnits = maxUnitsReverse;
             } else {
-                this.currentUnits = this.currentUnits - units;
+                this._currentUnits = this._currentUnits - units;
                 amount = units; // All is fine
             }
-            symbol = "-";
+            direction = MotorDirection.NEGATIVE;
         } else {
-            if(this.currentUnits + units > this.maxUnits) {
-                amount = this.maxUnits - this.currentUnits;
-                this.currentUnits = this.maxUnits;
+            if(this._currentUnits + units > this.posMax) {
+                amount = this.posMax - this._currentUnits;
+                this._currentUnits = this.posMax;
             } else {
-                this.currentUnits = this.currentUnits + units;
+                this._currentUnits = this._currentUnits + units;
                 amount = units;
             }
-            symbol = "+";
+            direction = MotorDirection.PLUS;
         }
 
-        await ArmController.instance.serialManager.write(this.motorId + " M " + symbol + " " + amount + "\r");
+        await ArmController.instance.serialManager.write(this.motorId + " M " + direction + " " + amount + "\r");
     };
 }
