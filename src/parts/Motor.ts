@@ -41,7 +41,7 @@ export class Motor {
         this._currentUnits = value;
     }
 
-    get motorId(): number{
+    get motorId(): number {
         return this._motorId;
     }
 
@@ -50,7 +50,7 @@ export class Motor {
     private _negMax: number;
     private readonly _motorId: number;
 
-    constructor (motorId: number) {
+    constructor(motorId: number) {
         this._motorId = motorId;
 
         this._posMax = undefined;
@@ -96,16 +96,16 @@ export class Motor {
         await Utils.delay(Motor.EDGE_WAIT);
 
         const movementRemaining = await this.getRemaining();
-        if(movementRemaining > 0) return; // If any movement is left return
+        if (movementRemaining > 0) return; // If any movement is left return
 
-         await this.moveToHardstop(direction, iterations + Motor.EDGE_UNITS);
+        await this.moveToHardstop(direction, iterations + Motor.EDGE_UNITS);
     };
 
     private moveFromHardstopToCenter = async (hardstopDirection: MotorDirection, iterations: number = 0): Promise<number> => {
-        if(await this.getLimitSwitch() === BinaryReturn.ON) return iterations;
+        if (await this.getLimitSwitch() === BinaryReturn.ON) return iterations;
 
         let invertedMotorDirection; // We need to invert the hardstop direction since we're moving the other way
-        if(hardstopDirection === MotorDirection.PLUS) invertedMotorDirection = MotorDirection.NEGATIVE;
+        if (hardstopDirection === MotorDirection.PLUS) invertedMotorDirection = MotorDirection.NEGATIVE;
         else invertedMotorDirection = MotorDirection.PLUS;
 
         await ArmController.instance.serialManager.write(this.motorId + " M " + invertedMotorDirection + " " + Motor.CENTER_UNITS + "\r");
@@ -131,11 +131,11 @@ export class Motor {
     };
 
     public move = async (units: number) => {
-        if(!this._posMax || !this._negMax || !this._currentUnits) throw new Error("Motor must be calibrated first!");
+        if (!this._posMax || !this._negMax || !this._currentUnits) throw new Error("Motor must be calibrated first!");
 
         let amount;
         let direction: MotorDirection;
-        if(units < 0) { // We're moving back
+        if (units < 0) { // We're moving back
             const maxUnitsReverse = this.negMax * -1; // Pos 0 is at the center, you can go positive or negative the same amount
             if (this._currentUnits + units < maxUnitsReverse) { // We're going negative, fix it
                 amount = this._currentUnits - this.negMax;
@@ -146,7 +146,7 @@ export class Motor {
             }
             direction = MotorDirection.NEGATIVE;
         } else {
-            if(this._currentUnits + units > this.posMax) {
+            if (this._currentUnits + units > this.posMax) {
                 amount = this.posMax - this._currentUnits;
                 this._currentUnits = this.posMax;
             } else {

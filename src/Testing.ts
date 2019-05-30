@@ -1,5 +1,4 @@
 import * as SerialPort from "serialport";
-import * as ReadLine from "readline";
 
 export class Testing {
 
@@ -8,8 +7,6 @@ export class Testing {
 
     constructor() {
         this.dataQueue = [];
-        //ReadLine.emitKeypressEvents(process.stdin);
-        //process.stdin.setRawMode(true);
 
         this.port = new SerialPort('/dev/ttyUSB0', {
             baudRate: 9600,
@@ -21,7 +18,6 @@ export class Testing {
     }
 
     public bind = () => {
-
         this.port.on("data", (chunk: string) => {
             console.log("got data chunk: " + chunk);
             const chunkData = chunk.toString().split("");

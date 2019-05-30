@@ -2,7 +2,6 @@ import SerialPort = require("serialport");
 import {Utils} from "./Utils";
 
 export class SerialManager {
-
     get path(): string {
         return this._path;
     }
@@ -46,7 +45,7 @@ export class SerialManager {
         this._serial.on("data", (chunk: any) => {
             // const chunkData = chunk.toString().split("");
             // chunkData.forEach(data => this.dataQueue.push(data));
-            if(this.dataQueue.length !== 0) {
+            if (this.dataQueue.length !== 0) {
                 console.log("[WARNING] Data queue appears to be backed up. This may lead to unexpected behavior.");
             }
 

@@ -1,9 +1,6 @@
 import {SerialManager} from "./SerialManager";
 import {SnapMotor} from "./parts/SnapMotor";
 import {Motor} from "./parts/Motor";
-
-import * as fs from "fs-extra";
-import * as path from 'path';
 import {CacheManager} from "./CacheManager";
 
 export enum BinaryReturn {
